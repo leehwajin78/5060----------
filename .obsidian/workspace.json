@@ -1,0 +1,214 @@
+{
+  "main": {
+    "id": "0ed7cb82018faabe",
+    "type": "split",
+    "children": [
+      {
+        "id": "3fd490eaf8050bd1",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "80a36273c0ca6199",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "그래프 뷰"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "2934ce01a33139bd",
+    "type": "split",
+    "children": [
+      {
+        "id": "780d49a125de776a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "68bbbd85fe205da1",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "파일 탐색기"
+            }
+          },
+          {
+            "id": "ea7e5bcb4b5d4bcc",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "검색"
+            }
+          },
+          {
+            "id": "cd31fb91173b29b2",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "북마크"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "745f22a1298e24d4",
+    "type": "split",
+    "children": [
+      {
+        "id": "3181424a94f8b3e4",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f31746bef790a495",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "백링크"
+            }
+          },
+          {
+            "id": "5432fa22185b1f6f",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "나가는 링크"
+            }
+          },
+          {
+            "id": "f13349fe47993283",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "태그"
+            }
+          },
+          {
+            "id": "6271da91106e0fd3",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "모든 속성"
+            }
+          },
+          {
+            "id": "0828f649918ec3c4",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "개요"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:빠른 전환기 열기": false,
+      "graph:그래프 뷰 열기": false,
+      "canvas:새 캔버스 만들기": false,
+      "daily-notes:오늘의 일일 노트 열기": false,
+      "templates:템플릿 삽입": false,
+      "command-palette:명령어 팔레트 열기": false,
+      "bases:새 베이스 생성하기": false,
+      "marp-slides:Show Slide Preview": false
+    }
+  },
+  "active": "80a36273c0ca6199",
+  "lastOpenFiles": [
+    "5060-brand-management-app/tasks/TASK_LIST_v1.md",
+    "5060-brand-management-app/tasks/TASK_LIST_v1_final.md",
+    "5060-brand-management-app/tasks/ISSUE_T-019.md",
+    "5060-brand-management-app/tasks/ISSUE_T-018.md",
+    "5060-brand-management-app/tasks/ISSUE_T-017.md",
+    "5060-brand-management-app/tasks/ISSUE_T-016.md",
+    "5060-brand-management-app/tasks/ISSUE_T-015.md",
+    "5060-brand-management-app/tasks/ISSUE_T-014.md",
+    "5060-brand-management-app/tasks/ISSUE_T-013.md",
+    "5060-brand-management-app/tasks/ISSUE_T-012.md",
+    "5060-brand-management-app/tasks/ISSUE_T-011.md",
+    "5060-brand-management-app/tasks/ISSUE_T-010.md",
+    "5060-brand-management-app/tasks/ISSUE_T-009.md",
+    "5060-brand-management-app/tasks/ISSUE_T-008.md",
+    "5060-brand-management-app/tasks/ISSUE_T-007.md",
+    "5060-brand-management-app/tasks/ISSUE_T-006.md",
+    "5060-brand-management-app/tasks/ISSUE_T-005.md",
+    "5060-brand-management-app/tasks/ISSUE_T-004.md",
+    "5060-brand-management-app/tasks/ISSUE_T-003.md",
+    "5060-brand-management-app/tasks/ISSUE_T-002.md",
+    "5060-brand-management-app/tasks/ISSUE_T-001.md",
+    "5060-brand-management-app/tasks/ISSUE_SEC-004.md",
+    "5060-brand-management-app/tasks/ISSUE_SEC-003.md",
+    "5060-brand-management-app/tasks/ISSUE_SEC-002.md",
+    "5060-brand-management-app/tasks/ISSUE_SEC-001.md",
+    "5060-brand-management-app/tasks/ISSUE_Q-009.md",
+    "5060-brand-management-app/tasks",
+    "5060-brand-management-app/docs",
+    "5060-brand-management-app",
+    "-app",
+    "새 폴더"
+  ]
+}
