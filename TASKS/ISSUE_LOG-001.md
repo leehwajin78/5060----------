@@ -16,11 +16,25 @@ assignees: ''
 - 요구사항: S12 (로그 확인 기능 - Vercel 로그로 대체)
 
 ## :white_check_mark: Task Breakdown (실행 계획)
-- [ ] `src/lib/utils/logger.ts` 유틸리티 생성 (단순 `console` 래퍼):
+- [ ] `src/lib/utils/logger.ts` 유틸리티 생성 (단순 `console` 래퍼되 직렬화 안전성 보장):
   ```typescript
   export const logger = {
-    info: (message: string, meta?: any) => console.log(JSON.stringify({ level: 'INFO', message, ...meta })),
-    error: (message: string, error?: any, meta?: any) => console.error(JSON.stringify({ level: 'ERROR', message, error, ...meta })),
+    info: (message: string, meta?: any) => {
+      try {
+        console.log(JSON.stringify({ level: 'INFO', message, timestamp: new Date().toISOString(), ...meta }));
+      } catch (e) {
+        console.log(`[INFO] ${message} (meta serialization failed)`);
+      }
+    },
+    error: (message: string, error?: any, meta?: any) => {
+      try {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : undefined;
+        console.error(JSON.stringify({ level: 'ERROR', message, error: errorMsg, stack, timestamp: new Date().toISOString(), ...meta }));
+      } catch (e) {
+        console.error(`[ERROR] ${message} (serialization failed)`);
+      }
+    },
   }
   ```
 - [ ] `generateDiagnosisReport`(C-005) 내에 `logger.info` 및 `logger.error` 적용:
@@ -33,12 +47,17 @@ assignees: ''
 **Scenario 1: 성공 시 로깅**
 - Given: 리포트 생성이 정상적으로 완료됨
 - When: C-005가 완료됨
-- Then: 서버 콘솔에 JSON 형태의 INFO 레벨 로그가 2회(시작, 완료) 찍힌다.
+- Then: 서버 콘솔에 JSON 형태의 INFO 레벨 로그가 2회(시작, 완료) 찍힌다. (timestamp 포함)
 
-**Scenario 2: 에러 시 로깅**
-- Given: Gemini API가 타임아웃됨
+**Scenario 2: 에러 시 로깅 (Stack Trace 포함)**
+- Given: Gemini API가 에러를 던짐 (Error 객체)
 - When: catch 블록으로 진입함
-- Then: 서버 콘솔에 JSON 형태의 ERROR 레벨 로그가 에러 객체와 함께 찍힌다.
+- Then: 서버 콘솔에 JSON 형태의 ERROR 레벨 로그가 찍히며, message와 stack 속성을 포함하여 디버깅을 돕는다.
+
+**Scenario 3: 직렬화(Serialization) 실패 방어**
+- Given: `meta` 파라미터에 순환 참조(Circular Dependency)를 가진 객체가 전달됨
+- When: `logger.info` 또는 `logger.error`가 호출됨
+- Then: JSON.stringify 에러로 인해 앱이 다운되지 않고, 안전한 폴백(Fallback) 텍스트가 콘솔에 출력된다.
 
 ## :gear: Technical & Non-Functional Constraints
 - Vercel의 로그 뷰어에서 JSON 형태를 자동으로 파싱하여 보여주므로 `JSON.stringify` 기반 출력이 모니터링에 매우 유리하다.

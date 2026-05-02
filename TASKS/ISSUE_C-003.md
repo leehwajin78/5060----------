@@ -22,88 +22,43 @@ assignees: ''
 - 상태 상수: DATA-002 (DiagnosisStatus)
 
 ## :white_check_mark: Task Breakdown (실행 계획)
-- [ ] `src/lib/actions/diagnosis.actions.ts`에 `submitDiagnosis()` Server Action 추가:
-  ```typescript
-  "use server"
-  export async function submitDiagnosis(input: unknown): Promise<SubmitDiagnosisOutput> {
-    // 1. 유효성 검증
-    const validation = validateDiagnosisInput(input)
-    if (!validation.valid) return validation.error
 
-    const { lead, answers, consentChecked } = validation.data
+### 처리 절차
 
-    try {
-      // 2. 트랜잭션으로 Lead + Diagnosis + Answer 생성
-      const result = await prisma.$transaction(async (tx) => {
-        const newLead = await tx.lead.create({
-          data: { name: lead.name, contact: lead.contact, channel: lead.channel ?? null },
-        })
+1. submitDiagnosis DTO 검증
+2. Lead 생성 또는 저장
+3. Diagnosis 생성
+4. Answer 16건 bulk insert
+5. Diagnosis.status를 report_pending으로 설정
+6. 저장 성공 응답 반환
 
-        const diagnosis = await tx.diagnosis.create({
-          data: {
-            leadId: newLead.id,
-            status: DiagnosisStatus.SUBMITTED,
-          },
-        })
+### Transaction 범위
 
-        await tx.answer.createMany({
-          data: answers.map(a => ({
-            diagnosisId: diagnosis.id,
-            questionCode: a.questionCode,
-            answerText: a.answerText,
-          })),
-        })
+아래 작업은 반드시 하나의 transaction으로 처리한다.
 
-        return { leadId: newLead.id, diagnosisId: diagnosis.id }
-      })
+- Lead 생성
+- Diagnosis 생성
+- Answer 16건 생성
 
-      // 3. AI 리포트 생성 트리거 (비동기, 실패해도 답변 보존)
-      // → C-005에서 구현
-      // generateReport(result.diagnosisId).catch(console.error)
+### 예외 처리
 
-      return {
-        success: true,
-        diagnosisId: result.diagnosisId,
-        reportStatus: "draft",
-        message: "진단이 정상 제출되었습니다. 검수 후 리포트를 안내드립니다.",
-      }
-    } catch (error) {
-      console.error("[submitDiagnosis] Transaction Error:", error)
-      return { success: false, error: "진단 제출에 실패했습니다. 다시 시도해주세요." }
-    }
-  }
-  ```
-- [ ] `prisma.$transaction()` 사용 — Lead/Diagnosis/Answer 원자적 생성
-- [ ] Answer `createMany` 활용 — 16건 일괄 삽입
-- [ ] AI 리포트 트리거 위치 주석 표시 (C-005 연동 시 활성화)
-- [ ] TypeScript 컴파일 에러 0건 확인
+| 상황 | 처리 |
+|---|---|
+| Answer 저장 중 일부 실패 | 전체 rollback |
+| 중복 questionCode | 저장 전 차단 |
+| DB 연결 실패 | 사용자에게 “제출 처리 중 문제가 발생했습니다” 안내 |
 
 ## :test_tube: Acceptance Criteria (BDD/GWT)
 
 **Scenario 1: 정상 제출 — Lead+Diagnosis+Answer 16건 생성**
 - Given: 유효한 입력이 검증을 통과함
 - When: `submitDiagnosis(input)`를 실행함
-- Then: DB에 Lead 1건, Diagnosis 1건(status=submitted), Answer 16건이 생성되고, `{ success: true, diagnosisId }` 가 반환된다
+- Then: DB에 Lead 1건, Diagnosis 1건(status=submitted), Answer 16건이 정확히 생성되고 성공 반환.
 
 **Scenario 2: 트랜잭션 원자성 — 부분 실패 시 전체 롤백**
-- Given: Answer 생성 중 DB 에러가 발생함
+- Given: Answer 저장 중 에러 발생
 - When: 트랜잭션이 실패함
-- Then: Lead와 Diagnosis도 롤백되어 어떤 레코드도 생성되지 않는다
-
-**Scenario 3: Answer 16건 정확히 생성**
-- Given: 16개 답변이 입력됨
-- When: 트랜잭션이 성공함
-- Then: `prisma.answer.count({ where: { diagnosisId } })`가 정확히 16을 반환한다
-
-**Scenario 4: Diagnosis.status 초기값**
-- Given: 트랜잭션이 성공함
-- When: 생성된 Diagnosis를 조회함
-- Then: status가 `DiagnosisStatus.SUBMITTED`("submitted")이다
-
-**Scenario 5: 검증 실패 시 DB 저장 미발생**
-- Given: 유효하지 않은 입력이 주어짐
-- When: `submitDiagnosis(input)`를 실행함
-- Then: DB에 어떤 레코드도 생성되지 않고 에러 응답이 반환된다
+- Then: Lead와 Diagnosis도 전체 롤백되어 아무것도 저장되지 않는다.
 
 ## :gear: Technical & Non-Functional Constraints
 - `prisma.$transaction()` 인터랙티브 트랜잭션 사용 — 원자성 보장

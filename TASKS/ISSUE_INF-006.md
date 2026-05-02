@@ -32,14 +32,21 @@ assignees: ''
     )
   }
   ```
-- [ ] (선택) CTA 클릭 이벤트(C-011 참조) 등 커스텀 이벤트를 Vercel Analytics의 `track()` 함수로 연동 대체 가능성 검토.
+- [ ] `track()` 함수 유틸리티 활용 (C-011 참조):
+  - CTA 버튼 클릭(`cta_click`), 진단 시작(`diagnosis_start`) 등 핵심 퍼널 이벤트를 트래킹할 수 있도록 Vercel Analytics `track` API를 사전에 테스트한다.
+  - Vercel Dashboard의 'Analytics' 탭에서 활성화(Enable) 처리가 필요함을 README 등에 명시한다.
 
 ## :test_tube: Acceptance Criteria (BDD/GWT)
 
-**Scenario 1: Analytics 컴포넌트 렌더링**
-- Given: Vercel에 배포된 프로덕션 URL 접속
+**Scenario 1: Analytics 컴포넌트 렌더링 및 페이지 뷰 기록**
+- Given: Vercel에 배포된 프로덕션 환경의 URL에 접속함
 - When: 웹 페이지 로딩이 완료됨
-- Then: Vercel Analytics 스크립트가 주입되어 동작하고, 대시보드에 트래픽이 찍히기 시작한다.
+- Then: 브라우저 Network 탭에서 Vercel Analytics 모듈 스크립트가 로드되며, Vercel 대시보드에 Page View 트래픽이 기록되기 시작한다.
+
+**Scenario 2: 개발 환경에서의 Analytics 비활성화**
+- Given: 개발자 로컬 환경(`NODE_ENV="development"`)
+- When: 애플리케이션을 실행하고 페이지에 접속함
+- Then: Vercel Analytics 컴포넌트는 무시되거나 Mocking 처리되어, 로컬에서 발생하는 불필요한 트래픽이 대시보드에 혼선을 주지 않는다.
 
 ## :gear: Technical & Non-Functional Constraints
 - 구글 애널리틱스(GA)를 대체할 수 있는 가장 가볍고 무료(Vercel Hobby Tier 내장)인 트래픽 분석 솔루션이다.

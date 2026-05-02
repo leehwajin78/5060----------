@@ -23,97 +23,48 @@ assignees: ''
 - 16문항 코드: Q1·Q2·Q4·Q6·Q7·Q8·Q9·Q11·Q13·Q15·Q26·Q28·Q33·Q40·Q41·Q42
 
 ## :white_check_mark: Task Breakdown (실행 계획)
-- [ ] `src/lib/schemas/diagnosis.schema.ts` 파일 생성
-- [ ] AnswerInput Zod 스키마 정의:
-  ```typescript
-  import { z } from "zod"
 
-  const wordCount = (str: string) => str.trim().split(/\s+/).filter(Boolean).length
+### Request DTO
 
-  export const AnswerInputSchema = z.object({
-    questionCode: z.string().min(1),
-    answerText: z.string()
-      .min(1, "답변을 입력해주세요")
-      .refine(val => wordCount(val) >= 3, {
-        message: "답변은 최소 3단어 이상 입력해주세요",
-      }),
-  })
-  ```
-- [ ] SubmitDiagnosisInput Zod 스키마 정의:
-  ```typescript
-  export const SubmitDiagnosisInputSchema = z.object({
-    lead: z.object({
-      name: z.string().min(1, "이름은 필수입니다"),
-      contact: z.string().min(1, "이메일 또는 전화번호는 필수입니다"),
-      channel: z.string().optional(),
-    }),
-    answers: z.array(AnswerInputSchema)
-      .length(16, "16문항 모두 답변해야 합니다"),
-    consentChecked: z.boolean().refine(val => val === true, {
-      message: "개인정보 수집·AI 처리 동의가 필요합니다",
-    }),
-  })
+| 필드 | 타입 | 필수 | 검증 조건 | 설명 |
+|---|---|---|---|---|
+| leadInfo.name | string | Y | 1자 이상 50자 이하 | 신청자 이름 |
+| leadInfo.contact | string | Y | 이메일 또는 전화번호 형식 | 연락처 |
+| leadInfo.channel | string | N | 100자 이하 | 유입 채널 |
+| answers | array | Y | 정확히 16개 | 진단 답변 목록 |
+| answers[].questionCode | string | Y | Q01~Q16 | 질문 코드 |
+| answers[].answerText | string | Y | 3단어 이상, 공백만 입력 불가 | 답변 내용 |
 
-  export type SubmitDiagnosisInput = z.infer<typeof SubmitDiagnosisInputSchema>
-  ```
-- [ ] SubmitDiagnosisOutput 타입 정의:
-  ```typescript
-  export type SubmitDiagnosisOutput = {
-    success: true
-    diagnosisId: string
-    reportStatus: "draft" | "report_pending"
-    message: string  // "제출 완료" 또는 "검수 후 안내"
-  } | {
-    success: false
-    error: string
-    fieldErrors?: Record<string, string[]>
-  }
-  ```
-- [ ] questionCode 유효성 커스텀 검증 — QUESTION_CODES 목록과 매칭 (DATA-001 참조)
-- [ ] answers 배열 중복 questionCode 검증 (동일 질문 중복 답변 차단)
-- [ ] TypeScript 컴파일 에러 0건 확인
+### 처리 기준
+
+1. leadInfo 검증
+2. answers 배열 개수 검증
+3. questionCode 중복 여부 검증
+4. answerText 공백 제거 후 3단어 미만 여부 검증
+5. transaction으로 Lead, Diagnosis, Answer 16건 저장
+6. Diagnosis.status=submitted 또는 report_pending으로 저장
+
+### 예외 처리
+
+| 상황 | 처리 |
+|---|---|
+| 연락처 없음 | 400 validation error |
+| 답변 16개 미만 | 422 validation error |
+| questionCode 중복 | 422 validation error |
+| 3단어 미만 답변 | 422 validation error |
+| DB 저장 실패 | 500 internal error |
 
 ## :test_tube: Acceptance Criteria (BDD/GWT)
 
 **Scenario 1: 정상 진단 제출 검증 성공**
 - Given: 이름, 연락처, 동의 체크, 16개 답변(각 3단어 이상)이 주어짐
 - When: `SubmitDiagnosisInputSchema.parse(input)`를 실행함
-- Then: 검증이 성공하고 파싱된 객체가 반환된다
+- Then: 검증이 성공하고 파싱된 객체가 반환되며, DB 저장 후 Diagnosis 1건과 Answer 16건이 정상 생성됨.
 
-**Scenario 2: 답변 3단어 미만 시 검증 실패**
-- Given: answers[0].answerText가 "두 단어"(2단어)인 입력이 주어짐
-- When: `SubmitDiagnosisInputSchema.parse(input)`를 실행함
-- Then: ZodError가 발생하며 "최소 3단어" 에러 메시지가 포함된다
-
-**Scenario 3: 답변 공백만 입력 시 검증 실패**
-- Given: answers[0].answerText가 "   "(공백만)인 입력이 주어짐
-- When: `SubmitDiagnosisInputSchema.parse(input)`를 실행함
-- Then: ZodError가 발생한다
-
-**Scenario 4: 답변 16건 미만 시 검증 실패**
-- Given: answers 배열에 15건만 포함됨
-- When: `SubmitDiagnosisInputSchema.parse(input)`를 실행함
-- Then: ZodError가 발생하며 "16문항 모두 답변" 에러가 포함된다
-
-**Scenario 5: 동의 미체크 시 검증 실패**
-- Given: consentChecked가 false임
-- When: `SubmitDiagnosisInputSchema.parse(input)`를 실행함
-- Then: ZodError가 발생하며 동의 필요 에러가 포함된다
-
-**Scenario 6: 연락처 누락 시 검증 실패**
-- Given: lead.contact가 빈 문자열임
-- When: `SubmitDiagnosisInputSchema.parse(input)`를 실행함
-- Then: ZodError가 발생하며 contact 필드 에러가 포함된다
-
-**Scenario 7: SubmitDiagnosisOutput 성공 응답 구조**
-- Given: 진단 제출 및 AI 리포트 생성이 정상 완료됨
-- When: 성공 응답을 구성함
-- Then: `{ success: true, diagnosisId: "cuid...", reportStatus: "draft", message: "제출 완료" }` 구조가 반환된다
-
-**Scenario 8: SubmitDiagnosisOutput AI 실패 시 응답**
-- Given: 답변 저장은 성공, AI 리포트 생성은 실패함
-- When: 부분 성공 응답을 구성함
-- Then: `{ success: true, diagnosisId: "cuid...", reportStatus: "report_pending", message: "검수 후 안내드립니다" }` 구조가 반환된다
+**Scenario 2: 유효성 검사 실패 시 에러 응답**
+- Given: 답변이 3단어 미만이거나 누락된 필드가 있음
+- When: 입력값을 검증함
+- Then: ZodError가 발생하며 DB 저장 없이 적절한 검증 에러(422/400)가 반환됨.
 
 ## :gear: Technical & Non-Functional Constraints
 - 3단어 판별 기준: `str.trim().split(/\s+/).filter(Boolean).length >= 3` — 한글은 띄어쓰기 기준

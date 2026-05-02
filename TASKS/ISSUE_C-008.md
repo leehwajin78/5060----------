@@ -18,76 +18,44 @@ assignees: ''
 - 상태 상수: DATA-002 (DiagnosisStatus), DATA-003 (ReportStatus)
 
 ## :white_check_mark: Task Breakdown (실행 계획)
-- [ ] `src/lib/actions/report.actions.ts`에 `reviewReportStatus(input)` 함수 추가:
-  ```typescript
-  export async function reviewReportStatus(input: ReviewReportInput): Promise<ReviewReportOutput> {
-    if (input.action !== ReviewAction.APPROVE && input.action !== ReviewAction.REJECT) {
-      return { success: false, error: "잘못된 action입니다." }
-    }
 
-    const report = await prisma.report.findUnique({ where: { id: input.reportId } })
-    if (!report) return { success: false, error: "리포트를 찾을 수 없습니다." }
+### 입력
 
-    const newReportStatus = input.action === ReviewAction.APPROVE 
-      ? ReportStatus.APPROVED 
-      : ReportStatus.REJECTED;
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| reportId | string | Y | 대상 리포트 ID |
+| status | enum | Y | approved 또는 rejected |
+| reviewNote | string | N | 검수 메모 |
 
-    const newDiagnosisStatus = input.action === ReviewAction.APPROVE
-      ? DiagnosisStatus.REVIEWED
-      : DiagnosisStatus.REPORT_GENERATED; // 거부 시 다시 생성 가능하도록
+### 상태 전이 규칙
 
-    // 트랜잭션: Report 업데이트 + Diagnosis 업데이트 + ReviewLog 생성
-    const result = await prisma.$transaction(async (tx) => {
-      const updated = await tx.report.update({
-        where: { id: input.reportId },
-        data: { status: newReportStatus },
-      })
+| 현재 상태 | 변경 가능 상태 |
+|---|---|
+| draft | approved, rejected |
+| rejected | approved, regeneration_requested |
+| approved | rejected 가능하나 이력 기록 필수 |
+| regeneration_requested | draft |
 
-      await tx.diagnosis.update({
-        where: { id: report.diagnosisId },
-        data: { status: newDiagnosisStatus },
-      })
+### 처리 절차
 
-      const log = await tx.reviewLog.create({
-        data: {
-          reportId: input.reportId,
-          action: input.action,
-          note: input.reviewNote ?? null,
-          beforeJson: report.reportJson, // 상태만 변경되므로 before/after 동일
-          afterJson: report.reportJson,
-        },
-      })
-
-      return { reportId: updated.id, newStatus: updated.status, reviewLogId: log.id }
-    })
-
-    return {
-      success: true,
-      reportId: result.reportId,
-      newStatus: result.newStatus,
-      reviewLogId: result.reviewLogId,
-    }
-  }
-  ```
-- [ ] 승인/거부 시 Report.status 및 Diagnosis.status 동기화 전이
-- [ ] TypeScript 컴파일 에러 0건 확인
+1. 관리자 인증 확인
+2. Report 조회
+3. 변경 가능한 상태인지 검증
+4. Report.status 변경
+5. ReviewLog 생성
+6. 성공 응답 반환
 
 ## :test_tube: Acceptance Criteria (BDD/GWT)
 
-**Scenario 1: 리포트 승인 정상 처리**
-- Given: Report(draft)가 주어짐
-- When: `action="approve"`로 실행함
-- Then: Report.status가 "approved"가 되고, Diagnosis.status가 "reviewed"가 되며 ReviewLog가 생성된다
+**Scenario 1: 상태 전이 및 ReviewLog 기록**
+- Given: 적절한 권한을 가진 관리자와 draft 상태의 리포트
+- When: 관리자가 승인(approve) 처리함
+- Then: Report 상태가 approved로, Diagnosis 상태가 reviewed로 변경되며, beforeJson과 afterJson이 포함된 ReviewLog가 생성됨.
 
-**Scenario 2: 리포트 거부 정상 처리**
-- Given: Report(draft)가 주어짐
-- When: `action="reject"`로 실행함
-- Then: Report.status가 "rejected"가 되고, ReviewLog가 생성된다
-
-**Scenario 3: 존재하지 않는 리포트**
-- Given: 잘못된 reportId가 주어짐
-- When: 실행함
-- Then: `{ success: false, error: "리포트를 찾을 수 없습니다." }` 반환
+**Scenario 2: 유효하지 않은 상태 전이 시도 방지**
+- Given: 이미 approved 상태인 리포트를 draft로 변경하려는 요청
+- When: 요청을 실행함
+- Then: 허용되지 않은 상태 전이로 거부(400)됨.
 
 ## :gear: Technical & Non-Functional Constraints
 - 승인(approved) 순간부터 Q-008(승인 리포트 조회 로직)을 통해 고객 웹뷰 노출이 가능해짐 (보안 임계점)

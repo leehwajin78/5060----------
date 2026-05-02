@@ -1,14 +1,14 @@
 # 개발 태스크 목록 명세서
 
-**Source:** SRS-001 v1.3 (5060 프리미엄 브랜드 매니지먼트 MVP-Free)
-**Date:** 2026-04-28
-**Total Tasks:** 82
+**Source:** SRS-001 v1.3 (5060 프리미엄 브랜드 매니지먼트 MVP-Free) + 보강 패치
+**Date:** 2026-05-02
+**Total Tasks:** 97
 
 ---
 
-## Step 1. 계약·데이터 명세 Task (23건)
+## Step 1. 계약·데이터 명세 Task (28건)
 
-### 1-1. 데이터베이스 스키마 (8건)
+### 1-1. 데이터베이스 스키마 (11건)
 
 | Task ID | Epic | Feature | 관련 SRS 섹션 | 선행 태스크 | 복잡도 |
 |---|---|---|---|---|---|
@@ -20,8 +20,11 @@
 | DB-006 | Infra/DB | AiRun 테이블 스키마·마이그레이션 (id, diagnosisId FK, taskType, provider, status, errorMessage) | Appendix A, E | DB-003 | L |
 | DB-007 | Infra/DB | ReviewLog 테이블 스키마·마이그레이션 (id, reportId FK, action, note, beforeJson, afterJson) | Appendix A, E | DB-005 | L |
 | DB-008 | Infra/DB | AdminUser 테이블 스키마 (선택 — 환경변수 단순 인증 대체 가능) | Appendix A | DB-001 | L |
+| DB-009 | Infra/DB | 주요 FK 및 status/createdAt 인덱스 추가 | Infra/DB | DB-001~008 | P0 |
+| DB-010 | Infra/DB | seed 데이터 및 개발용 fixture 구성 | Infra/DB | DB-001~008 | P1 |
+| DB-011 | Infra/DB | 개인정보 보존·삭제 기준 필드 검토 | Infra/DB | DB-002 | P1 |
 
-### 1-2. API·통신 계약 DTO/Schema (8건)
+### 1-2. API·통신 계약 DTO/Schema (10건)
 
 | Task ID | Epic | Feature | 관련 SRS 섹션 | 선행 태스크 | 복잡도 |
 |---|---|---|---|---|---|
@@ -33,6 +36,8 @@
 | API-006 | Contract | regenerateReport Server Action DTO 정의 (재생성 요청 → AiRun+Report) | 3.3 | DB-005, DB-006 | L |
 | API-007 | Contract | GET /api/reports/[id] Response DTO 정의 (approved Report만 반환) | 3.3 | DB-005 | L |
 | API-008 | Contract | 공통 에러 응답 코드 정의 (400, 404, 500) | 3.3 | None | L |
+| API-009 | Contract | 공통 ApiResponse 타입 정의 | Contract | INF-001 | P0 |
+| API-010 | Contract | 공통 ValidationError 타입 정의 | Contract | API-009 | P0 |
 
 ### 1-3. 정적 데이터 및 Mock (7건)
 
@@ -94,7 +99,16 @@
 
 ---
 
-## Step 3. 테스트 Task — AC → TDD 변환 (15건)
+## Step 3. AI 비즈니스 분리 Task (2건)
+
+| Task ID | Epic | Feature | 관련 SRS 섹션 | 선행 태스크 | 복잡도 |
+|---|---|---|---|---|---|
+| AI-001 | AI | AI 프롬프트 템플릿 파일 분리 | AI | API-004 | P0 |
+| AI-002 | AI | AI 응답 파싱 실패 복구 로직 | AI | AI-001 | P1 |
+
+---
+
+## Step 4. 테스트 Task — AC → TDD 변환 (19건)
 
 | Task ID | Epic | Feature | 관련 SRS 섹션 | 선행 태스크 | 복잡도 |
 |---|---|---|---|---|---|
@@ -113,12 +127,16 @@
 | T-013 | Test | CTA 클릭 이벤트 기록 검증 | REQ-FREE-FUNC-042 AC | C-011 | L |
 | T-014 | Test | AI 호출 횟수 제한 — 진단당 1회+재생성 1회 초과 차단 검증 | REQ-NF-FREE-023 | C-010 | M |
 | T-015 | Test | 관리자 인증 — 잘못된 패스워드 접근 차단 검증 | OI-009 | FE-007 | L |
+| T-017 | Test | AI 응답 Zod 실패 테스트 | Test | C-005 | P0 |
+| T-018 | Test | 관리자 승인 후 외부 리포트 접근 가능 테스트 | Test | SEC-003, Q-008 | P1 |
+| T-019 | Test | 관리자 미인증 접근 차단 E2E 테스트 | Test | SEC-002 | P1 |
+| T-020 | Test | 개인정보 마스킹 snapshot 테스트 | Test | SEC-001 | P0 |
 
 ---
 
-## Step 4. 비기능·인프라 Task (17건)
+## Step 5. 비기능·인프라 Task (21건)
 
-### 4-1. 인프라·보안·성능·로깅 (13건)
+### 5-1. 인프라·보안·성능·로깅 (15건)
 
 | Task ID | Epic | Feature | 관련 SRS 섹션 | 선행 태스크 | 복잡도 |
 |---|---|---|---|---|---|
@@ -135,8 +153,10 @@
 | PERF-003 | Performance | AI 리포트 60초 초과 시 "처리 중" 안내 UI | REQ-NF-FREE-003 | C-005 | M |
 | LOG-001 | Logging | AiRun 기반 AI 호출 로깅 (성공/실패/시간/오류) | S12 | DB-006, C-005 | L |
 | LOG-002 | Logging | Sentry Free 또는 Vercel Logs 연동 (선택) | 3.1 | INF-004 | L |
+| OPS-003 | Ops | 배포 전 환경변수 체크리스트 | Ops | INF-005 | P0 |
+| OPS-004 | Ops | 수동 장애 복구 Runbook 작성 | Ops | LOG-001, LOG-002 | P1 |
 
-### 4-2. 데이터 보호·운영 (4건)
+### 5-2. 데이터 보호·운영 (6건)
 
 | Task ID | Epic | Feature | 관련 SRS 섹션 | 선행 태스크 | 복잡도 |
 |---|---|---|---|---|---|
@@ -144,6 +164,8 @@
 | DPR-002 | DataProtection | 무료 AI API 데이터 처리 약관 검토 체크리스트 | REQ-NF-FREE-032 | None | L |
 | OPS-001 | Ops | 장애 수동 확인·복구 체크리스트 문서화 | REQ-NF-FREE-011 | INF-004 | L |
 | OPS-002 | Ops | GA4 기본 방문/CTA 이벤트 추적 설정 (선택) | 3.1 | INF-004 | L |
+| DPR-003 | DataProtection | 개인정보 처리 안내 문구 작성 | Compliance | DB-011 | P0 |
+| DPR-004 | DataProtection | AI 분석 동의 문구 작성 | Compliance | DPR-002 | P0 |
 
 ---
 
@@ -172,34 +194,47 @@ graph TD
 
 ---
 
-## 추천 구현 순서
+## 보강 후 권장 Milestone 구조 (총 97개 태스크)
 
-| Phase | 태스크 | 설명 |
-|---|---|---|
-| 0 | INF-001 → DB-001 → INF-002 → INF-005 | 프로젝트 부트스트랩 |
-| 1 | DB-002~008, API-001~008, DATA-001~004, MOCK-001~003 | 데이터 계약 |
-| 2 | Q-001, Q-002, FE-001, DPR-001, C-001~003, FE-002 | 진단 폼 |
-| 3 | INF-003, SEC-001, C-004~006, LOG-001 | AI 리포트 |
-| 4 | FE-007, SEC-002, Q-003~004, Q-006~007, FE-003~004, C-007~010 | 관리자 콘솔 |
-| 5 | Q-008, SEC-003, Q-005, FE-005~006, C-011 | 리포트 웹뷰/CTA |
-| 6 | T-001 ~ T-015 | 테스트 |
-| 7 | INF-004, PERF-001~003, LOG-002, OPS-001~002 | 배포/운영 |
+### Milestone 0. 프로젝트 기반 구축
+- **포함 태스크:** INF-001, DB-001, INF-002, INF-005, DB-009, API-009, API-010
+- **완료 기준:** Next.js 프로젝트 실행 가능, Prisma 연결 가능, 환경변수 템플릿 완성, 공통 응답 타입 정의 완료
+
+### Milestone 1. 데이터 계약 및 스키마 확정
+- **포함 태스크:** DB-002~008, DATA-001~004, API-001~008, DB-010, DB-011
+- **완료 기준:** 모든 Prisma model 작성, enum 정의 완료, Zod schema 작성, seed 데이터 생성 가능
+
+### Milestone 2. 진단 제출 기능 구현
+- **포함 태스크:** Q-001, Q-002, FE-001, DPR-001, DPR-003, DPR-004, C-001~003, FE-002, T-001~004
+- **완료 기준:** 사용자가 진단 폼 제출 가능, Lead/Diagnosis/Answer 정상 저장, 답변 검증 및 rollback 테스트 통과
+
+### Milestone 3. AI 리포트 생성 기능 구현
+- **포함 태스크:** INF-003, AI-001, AI-002, SEC-001, C-004~006, LOG-001, T-005~007, T-017, T-020
+- **완료 기준:** Gemini 호출 가능, AI payload 개인정보 미포함, Report draft 저장 가능, 실패 로그 저장 가능
+
+### Milestone 4. 관리자 검수 콘솔 구현
+- **포함 태스크:** FE-007, SEC-002, SEC-004, Q-003~004, Q-006~007, FE-003~004, C-007~010, T-008~010, T-014~016, T-019
+- **완료 기준:** 관리자 로그인 가능, 진단 목록/상세 조회 가능, 리포트 승인·거부·수정·재생성 가능
+
+### Milestone 5. 승인 리포트 웹뷰 및 CTA 구현
+- **포함 태스크:** Q-008, SEC-003, Q-005, FE-005~006, C-011, T-011~013, T-018
+- **완료 기준:** approved 리포트 외부 노출, 접근 차단 기능 정상 동작, CTA 링크 작동 및 이벤트 기록
+
+### Milestone 6. 배포·운영 안정화
+- **포함 태스크:** INF-004, PERF-001~003, LOG-002, OPS-001~004, DPR-002
+- **완료 기준:** Vercel 배포 완료, 성능 기준 검증 완료, 환경변수 및 장애 복구 메뉴얼 확인
 
 ---
 
-## 태스크 통계
+## 태스크 통계 (수정본)
 
-| 카테고리 | 건수 |
-|---|---|
-| Step 1: DB 스키마 | 8 |
-| Step 1: API/DTO 계약 | 8 |
-| Step 1: 정적 데이터 + Mock | 7 |
-| Step 2: Query (Read) | 9 |
-| Step 2: Command (Write) | 11 |
-| Step 2: FE 인터랙션 | 7 |
-| Step 3: 테스트 | 15 |
-| Step 4: 인프라/보안/성능/로깅 | 13 |
-| Step 4: 데이터 보호/운영 | 4 |
-| **합계** | **82** |
+| 카테고리 | 기존 건수 | 보강 건수 | 누적 총계 |
+|---|---|---|---|
+| Step 1: DB/Data/API | 23 | +5 | 28 |
+| Step 2: Query/Command/FE | 27 | 0 | 27 |
+| Step 3: AI 비즈니스 분리 | 0 | +2 | 2 |
+| Step 4: 테스트 | 15 | +4 | 19 |
+| Step 5: 인프라/운영/보안 | 17 | +4 | 21 |
+| **합계** | **82** | **+15** | **97** |
 
-> **Note:** 본 목록은 SRS v1.3 MVP-Free 범위만 대상. V1.5/V2 Deferred 항목(마스터 브리프, 원라이너, F15, 교차검증, Typeform, RBAC 등)은 미포함.
+> **Note:** 본 목록은 보강 패치가 반영된 최종 MVP-Free 범위입니다.

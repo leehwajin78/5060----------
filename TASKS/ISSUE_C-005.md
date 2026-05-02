@@ -24,110 +24,47 @@ assignees: ''
 - Report 상태: DATA-003 (ReportStatus.DRAFT)
 
 ## :white_check_mark: Task Breakdown (실행 계획)
-- [ ] `src/lib/services/ai-report.service.ts` 파일 생성
-- [ ] Gemini API 클라이언트 설정:
-  ```typescript
-  import { GoogleGenerativeAI } from "@google/generative-ai"
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
-  ```
-- [ ] `generateDiagnosisReport(diagnosisId)` 함수 구현:
-  ```typescript
-  export async function generateDiagnosisReport(diagnosisId: string) {
-    // 1. AiRun 레코드 생성 (status: processing)
-    const aiRun = await prisma.aiRun.create({
-      data: {
-        diagnosisId,
-        taskType: AiRunTaskType.GENERATE_REPORT,
-        status: AiRunStatus.PROCESSING,
-        startedAt: new Date(),
-      },
-    })
 
-    try {
-      // 2. payload 구성 (C-004)
-      const payload = await buildAiPayload(diagnosisId)
-      if (!payload) throw new Error("Answer 16건 미달")
+### 입력
 
-      // 3. Gemini API 호출
-      const prompt = buildPrompt(payload.answers)
-      const result = await model.generateContent(prompt)
-      const rawJson = extractJson(result.response.text())
+- diagnosisId
+- answers: questionCode + answerText
 
-      // 4. Zod 검증 (환각 차단)
-      const parsed = DiagnosisReportSchema.parse(rawJson)
+### 처리 절차
 
-      // 5. Report 저장 (draft)
-      const report = await prisma.report.create({
-        data: {
-          diagnosisId,
-          status: ReportStatus.DRAFT,
-          reportJson: parsed,
-        },
-      })
+1. Diagnosis 존재 여부 확인
+2. Answer 16건 존재 여부 확인
+3. AI payload 익명화
+4. AiRun.status=processing 생성
+5. Gemini API 호출
+6. 응답 JSON 파싱
+7. DiagnosisReportSchema로 Zod 검증
+8. Report.status=draft 저장
+9. AiRun.status=completed 변경
+10. Diagnosis.status=report_generated 변경
 
-      // 6. Diagnosis 상태 업데이트
-      await prisma.diagnosis.update({
-        where: { id: diagnosisId },
-        data: { status: DiagnosisStatus.REPORT_GENERATED },
-      })
+### 예외 처리
 
-      // 7. AiRun 성공 기록
-      await prisma.aiRun.update({
-        where: { id: aiRun.id },
-        data: { status: AiRunStatus.COMPLETED, completedAt: new Date() },
-      })
-
-      return { success: true, reportId: report.id, aiRunId: aiRun.id }
-    } catch (error) {
-      // 8. AiRun 실패 기록
-      await prisma.aiRun.update({
-        where: { id: aiRun.id },
-        data: {
-          status: AiRunStatus.FAILED,
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
-          completedAt: new Date(),
-        },
-      })
-      console.error("[generateDiagnosisReport] Error:", error)
-      return { success: false, aiRunId: aiRun.id, error: String(error) }
-    }
-  }
-  ```
-- [ ] `buildPrompt(answers)` 프롬프트 구성 함수:
-  - 시스템 프롬프트: "5060 전문가 브랜드 진단 AI" 역할 지시
-  - 출력 형식: JSON 구조 명시 (DiagnosisReportSchema와 일치)
-  - 답변 데이터 삽입
-- [ ] `extractJson(text)` 유틸리티 — AI 응답에서 JSON 블록 추출 (마크다운 코드블록 제거)
-- [ ] 환경변수: `GEMINI_API_KEY` 필요
-- [ ] `npm install @google/generative-ai` 의존성 설치
+| 상황 | 처리 |
+|---|---|
+| Diagnosis 없음 | 404 |
+| Answer 16건 미만 | 422 |
+| Gemini API 실패 | AiRun.status=failed |
+| JSON 파싱 실패 | AiRun.status=failed |
+| Zod 검증 실패 | AiRun.status=failed |
+| timeout | 처리 중 안내 또는 실패 기록 |
 
 ## :test_tube: Acceptance Criteria (BDD/GWT)
 
-**Scenario 1: AI 리포트 생성 성공 (E2E)**
-- Given: Diagnosis D에 Answer 16건이 존재하고 GEMINI_API_KEY가 설정됨
-- When: `generateDiagnosisReport(D)`를 실행함
-- Then: Report(status=draft, reportJson=Zod검증통과)가 생성되고, AiRun(status=completed)이 기록된다
+**Scenario 1: 정상 리포트 생성 완료**
+- Given: 올바른 진단과 16개 답변
+- When: AI 리포트 생성을 요청함
+- Then: AI가 응답하고 Zod 검증을 통과하여 Report.status가 draft로 생성되며, AiRun이 completed로 업데이트됨.
 
-**Scenario 2: Zod 검증 실패 시 Report 미생성**
-- Given: AI가 스키마에 맞지 않는 JSON을 반환함
-- When: DiagnosisReportSchema.parse()가 ZodError를 throw함
-- Then: Report는 생성되지 않고, AiRun(status=failed, errorMessage="...")이 기록된다
-
-**Scenario 3: AiRun 성공 기록**
-- Given: AI 호출이 성공함
-- When: AiRun을 조회함
-- Then: status=completed, startedAt과 completedAt이 모두 기록됨
-
-**Scenario 4: AiRun 실패 기록**
-- Given: AI API 호출이 타임아웃됨
-- When: AiRun을 조회함
-- Then: status=failed, errorMessage에 에러 내용이 기록됨
-
-**Scenario 5: Diagnosis 상태 전이**
-- Given: AI 리포트 생성이 성공함
-- When: Diagnosis를 조회함
-- Then: status가 `report_generated`로 업데이트됨
+**Scenario 2: 생성 실패 및 재시도 가능 상태 처리**
+- Given: AI 생성 중 타임아웃 또는 Zod 검증 실패 발생
+- When: 예외가 발생함
+- Then: Report가 생성되지 않고, AiRun이 failed 상태로 로그를 남기며 원본 Answer 데이터는 보존됨.
 
 ## :gear: Technical & Non-Functional Constraints
 - Gemini 2.0 Flash 사용 (Free Tier 호환)

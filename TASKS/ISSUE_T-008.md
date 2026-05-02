@@ -35,6 +35,16 @@ assignees: ''
 - When: 함수를 실행함
 - Then: 각 항목의 `lead.name` 및 `reports[0].status`에 접근이 가능하다
 
+**Scenario 3: 빈 데이터 반환**
+- Given: DB에 일치하는 Diagnosis 데이터가 하나도 없음
+- When: `getDiagnosisList`를 실행함
+- Then: 빈 배열 `[]`이 반환되고 에러가 발생하지 않는다
+
+**Scenario 4: Report가 아직 생성되지 않은 경우 (진행 중 상태)**
+- Given: Diagnosis는 있으나 연결된 Report가 없음 (진단 진행 중이거나 실패한 상태)
+- When: `getDiagnosisList`를 실행함
+- Then: `reports` 배열이 비어있음(`[]`)을 안전하게 처리하여 크래시 없이 리스트를 반환한다
+
 ## :gear: Technical & Non-Functional Constraints
 - 단순한 쿼리 로직이지만, Prisma의 `include` 및 `take: 1` 설정이 런타임 결과에 어떻게 매핑되는지 타입 시스템 레벨에서 확인하는 목적도 가진다.
 
